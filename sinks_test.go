@@ -2,10 +2,11 @@ package script
 
 import (
 	"bytes"
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 // doSinksOnPipe calls every kind of sink method on the supplied pipe and
@@ -172,6 +173,29 @@ func TestSHA256Sum(t *testing.T) {
 	}
 }
 
+func TestMD5Sum(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		testFileName string
+		want         string
+	}{
+		{"testdata/empty.txt", "d41d8cd98f00b204e9800998ecf8427e"},
+		{"testdata/test.txt", "b99bb667d519d45653b19ce0ac315ffb"},
+		{"testdata/bytes.bin", "655fdfa26a8f1414a5ea6968744d79ef"},
+	}
+
+	for _, tc := range testCases {
+		p := File(tc.testFileName)
+		got, err := p.MD5Sum()
+		if err != nil {
+			t.Error(err)
+		}
+		if got != tc.want {
+			t.Errorf("want %q, got %q", tc.want, got)
+		}
+	}
+}
+
 func TestSliceSink(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -180,7 +204,7 @@ func TestSliceSink(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Multiple lines pipe",
+			name:   "Multiple lines pipe",
 			fields: Echo("testdata/multiple_files/1.txt\ntestdata/multiple_files/2.txt\ntestdata/multiple_files/3.tar.zip\n"),
 			want: []string{
 				"testdata/multiple_files/1.txt",
@@ -190,19 +214,19 @@ func TestSliceSink(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Empty pipe",
-			fields: Echo(""),
-			want: []string{},
+			name:    "Empty pipe",
+			fields:  Echo(""),
+			want:    []string{},
 			wantErr: false,
 		},
 		{
-			name: "Single newline",
-			fields: Echo("\n"),
-			want: []string{""},
+			name:    "Single newline",
+			fields:  Echo("\n"),
+			want:    []string{""},
 			wantErr: false,
 		},
 		{
-			name: "Empty line between two existing lines",
+			name:   "Empty line between two existing lines",
 			fields: Echo("testdata/multiple_files/1.txt\n\ntestdata/multiple_files/3.tar.zip"),
 			want: []string{
 				"testdata/multiple_files/1.txt",
