@@ -1,13 +1,21 @@
 package script
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
+)
+
+// Supported hashing algorithms
+const (
+	MD5    string = "md5"
+	SHA256 string = "sha256"
 )
 
 // AppendFile appends the contents of the Pipe to the specified file, and closes
@@ -46,15 +54,21 @@ func (p *Pipe) CountLines() (int, error) {
 	return lines, p.Error()
 }
 
-// SHA256Sum calculates the SHA-256 of the file from the pipe's reader, and returns the
+// HashSum calculates the hash sum of the file from the pipe's reader, and returns the
 // string result, or an error. If there is an error reading the pipe, the pipe's
 // error status is also set.
-func (p *Pipe) SHA256Sum() (string, error) {
+func (p *Pipe) hashSum(algorithm string) (string, error) {
 	if p == nil || p.Error() != nil {
 		return "", p.Error()
 	}
 
-	h := sha256.New()
+	var h hash.Hash
+	if algorithm == MD5 {
+		h = md5.New()
+	} else if algorithm == SHA256 {
+		h = sha256.New()
+	}
+
 	if _, err := io.Copy(h, p.Reader); err != nil {
 		p.SetError(err)
 		return "", p.Error()
@@ -62,6 +76,20 @@ func (p *Pipe) SHA256Sum() (string, error) {
 
 	encodedCheckSum := hex.EncodeToString(h.Sum(nil)[:])
 	return encodedCheckSum, nil
+}
+
+// SHA256Sum calculates the SHA-256 of the file from the pipe's reader, and returns the
+// string result, or an error. If there is an error reading the pipe, the pipe's
+// error status is also set.
+func (p *Pipe) SHA256Sum() (string, error) {
+	return p.hashSum(SHA256)
+}
+
+// MD5Sum calculates the MD5 of the file from the pipe's reader, and returns the
+// string result, or an error. If there is an error reading the pipe, the pipe's
+// error status is also set.
+func (p *Pipe) MD5Sum() (string, error) {
+	return p.hashSum(MD5)
 }
 
 // Slice returns the contents of the pipe as a slice of strings, one element per line, or an error.
